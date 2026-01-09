@@ -163,7 +163,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header style={{textAlign: 'center'}}>
-        <h1>TOON GRAVEYARD ☠️</h1>
+        <h1>SILICON CEMETERY ☠️</h1>
         <div className="subtitle">GLOBAL SERVER OF DEAD TECH</div>
       </header>
       
