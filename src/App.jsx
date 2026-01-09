@@ -1,127 +1,124 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// The "Spirits" speaking from beyond the grave
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&w=400&q=80";
+
 const GHOST_MESSAGES = [
-  "I saw your browser history before I died. I chose to shut down.",
-  "You used a gas station charger on me. This is murder.",
-  "I'm haunting your new phone. It will lag when you need it most.",
-  "Remember when you dropped me in the toilet? I never forgot.",
-  "I was 99% battery when you unplugged me. Unforgivable.",
-  "You have sticky fingers. I hated every touch.",
-  "I hope your new phone cracks on the first drop.",
+  "I saw your browser history. I chose death.",
+  "You bought a cheap case. I felt every impact.",
+  "Haunting your Wi-Fi forever now.",
+  "My battery didn't die, it committed sudoku.",
+  "I was worth more than your car.",
+  "Don't pretend you miss me.",
   "404: Soul Not Found."
 ];
 
-// Funny sounds/speech phrases
 const ROBOTIC_PRAYERS = [
   "Rest in pieces.",
   "Uploading soul to the cloud.",
-  "System failure imminent.",
   "Pressing F massively.",
-  "Respects paid. Transaction pending.",
-  "Battery low. Sadness high."
-];
-
-const INITIAL_GRAVES = [
-  {
-    id: 1,
-    name: "iPhone 6s",
-    cause: "Battery Bloat",
-    eulogy: "I saw your browser history before I died. I chose to shut down.",
-    respects: 420,
-    image: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=400&q=80"
-  }
+  "Sadness buffer overflow.",
+  "Respects paid."
 ];
 
 export default function App() {
   const [graves, setGraves] = useState(() => {
-    const saved = localStorage.getItem('silicon-cemetery');
-    return saved ? JSON.parse(saved) : INITIAL_GRAVES;
+    try {
+      const saved = localStorage.getItem('silicon-cemetery-v2');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [showModal, setShowModal] = useState(false);
-  const [newGrave, setNewGrave] = useState({ name: '', cause: '', eulogy: '', image: '' });
-  const [shake, setShake] = useState(false); // For screen shake effect
+  const [newGrave, setNewGrave] = useState({ name: '', cause: '', eulogy: '', image: null });
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('silicon-cemetery', JSON.stringify(graves));
+    try {
+      localStorage.setItem('silicon-cemetery-v2', JSON.stringify(graves));
+    } catch (e) {
+      alert("Storage full! That last image was too thicc for the browser memory.");
+    }
   }, [graves]);
 
-  // FEATURE: Text-to-Speech Logic
   const speak = (text) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      // Randomize pitch/rate for extra weirdness
-      utterance.pitch = Math.random() * 2; 
-      utterance.rate = 0.8; 
+      utterance.rate = 0.9; 
+      utterance.pitch = 0.6; // Deeper robotic voice
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  const handleRespect = (id) => {
-    // 10% chance to SUBTRACT respect because the ghost is ungrateful
-    const isUngrateful = Math.random() < 0.1;
-    const change = isUngrateful ? -5 : 1;
-    
-    setGraves(graves.map(grave => 
-      grave.id === id ? { ...grave, respects: grave.respects + change } : grave
-    ));
-
-    // Audio Feedback
-    if (isUngrateful) {
-      speak("Don't touch me.");
-    } else {
-      const randomPhrase = ROBOTIC_PRAYERS[Math.floor(Math.random() * ROBOTIC_PRAYERS.length)];
-      speak(randomPhrase);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // 2MB limit check roughly
+      if (file.size > 2000000) {
+        alert("File too big! Please keep it under 2MB or the ghost will be heavy.");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result); // Show preview
+        setNewGrave({ ...newGrave, image: reader.result }); // Save string
+      };
+      reader.readAsDataURL(file);
     }
-
-    if (navigator.vibrate) navigator.vibrate(isUngrateful ? [50, 50, 50] : 50);
   };
 
-  // FEATURE: The Spirit Box (Auto-fill insult)
+  const handleRespect = (id) => {
+    setGraves(graves.map(grave => 
+      grave.id === id ? { ...grave, respects: grave.respects + 1 } : grave
+    ));
+    const randomPhrase = ROBOTIC_PRAYERS[Math.floor(Math.random() * ROBOTIC_PRAYERS.length)];
+    speak(randomPhrase);
+    if (navigator.vibrate) navigator.vibrate(50);
+  };
+
   const channelSpirit = (e) => {
-    e.preventDefault(); // Stop form submit
+    e.preventDefault();
     const randomMsg = GHOST_MESSAGES[Math.floor(Math.random() * GHOST_MESSAGES.length)];
     setNewGrave({ ...newGrave, eulogy: randomMsg });
-    speak("I have something to say.");
+    speak("I have words.");
   };
 
   const handleBurial = (e) => {
     e.preventDefault();
-    
-    // Trigger screen shake
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
-    
-    speak(`Burying ${newGrave.name || "this piece of junk"}. Goodbye.`);
+    speak(`Burying ${newGrave.name}. Goodbye.`);
 
     const grave = {
       id: Date.now(),
       ...newGrave,
       respects: 0,
-      image: newGrave.image || "https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&w=400&q=80"
+      image: newGrave.image || DEFAULT_IMAGE // Use uploaded or default
     };
+    
     setGraves([grave, ...graves]);
     setShowModal(false);
-    setNewGrave({ name: '', cause: '', eulogy: '', image: '' });
+    setNewGrave({ name: '', cause: '', eulogy: '', image: null });
+    setPreviewImage(null);
   };
 
   return (
-    <div className={`app-container ${shake ? 'shake-animation' : ''}`}>
-      <header>
-        <h1 onClick={() => speak("The Silicon Cemetery.")}>The Silicon Cemetery 🪦</h1>
-        <div className="subtitle">Where gadgets go to judge you from hell.</div>
+    <div className="app-container">
+      <header style={{textAlign: 'center'}}>
+        <h1>TOON GRAVEYARD ☠️</h1>
+        <div className="subtitle">WHERE TECH GOES TO DIE</div>
       </header>
 
       <div className="cemetery-grid">
+        {graves.length === 0 && <p style={{textAlign:'center', width:'100%'}}>No deaths yet. You must take good care of your stuff. Boring.</p>}
+        
         {graves.map(grave => (
           <div key={grave.id} className="tombstone">
-            <img src={grave.image} alt={grave.name} className="gadget-img" />
+            <img src={grave.image} alt="Dead gadget" className="gadget-img" />
             <div className="rip-header">{grave.name}</div>
-            <div className="cause-of-death">💀 {grave.cause}</div>
+            <div className="cause-tag">💀 {grave.cause || "Unknown Causes"}</div>
             
-            {/* The Eulogy is now a blockquote for dramatic effect */}
             <blockquote className="eulogy">
               "{grave.eulogy}"
             </blockquote>
@@ -130,7 +127,7 @@ export default function App() {
               className="pay-respects-btn"
               onClick={() => handleRespect(grave.id)}
             >
-              Press F ({grave.respects})
+              F ({grave.respects})
             </button>
           </div>
         ))}
@@ -141,10 +138,10 @@ export default function App() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="burial-form" onClick={e => e.stopPropagation()}>
-            <h2>⚰️ Prepare the Body</h2>
+            <h2 style={{margin:0, textTransform: 'uppercase'}}>⚰️ New Victim</h2>
             
             <input 
-              placeholder="Device Name (e.g. My shattered ego)" 
+              placeholder="Device Name (e.g. Broken Controller)" 
               value={newGrave.name}
               onChange={e => setNewGrave({...newGrave, name: e.target.value})}
             />
@@ -153,34 +150,41 @@ export default function App() {
               value={newGrave.cause}
               onChange={e => setNewGrave({...newGrave, cause: e.target.value})}
             >
-              <option value="">How did it die?</option>
-              <option value="Gravity Test Failed">Gravity Test Failed</option>
-              <option value="Drowned in Toilet">Drowned in Toilet</option>
-              <option value="Murdered (Threw against wall)">Murdered (Threw against wall)</option>
-              <option value="Choked on an Update">Choked on an Update</option>
-              <option value="Old Age (2 years)">Old Age (2 years)</option>
+              <option value="">Select Cause of Death...</option>
+              <option value="Smashed in Gamer Rage">Smashed in Gamer Rage</option>
+              <option value="Water Damage">Water Damage</option>
+              <option value="Just Gave Up">Just Gave Up</option>
+              <option value="Exploded">Exploded</option>
             </select>
             
-            <div className="spirit-box-container">
+            <div style={{display:'flex', gap: '5px'}}>
               <textarea 
-                placeholder="Eulogy... or let the ghost speak." 
-                rows="3"
+                style={{flex: 1}}
+                placeholder="Eulogy..." 
+                rows="2"
                 value={newGrave.eulogy}
                 onChange={e => setNewGrave({...newGrave, eulogy: e.target.value})}
               />
-              <button className="spirit-btn" onClick={channelSpirit}>
-                👻 Summon Spirit Message
-              </button>
+              <button className="spirit-btn" onClick={channelSpirit}>👻</button>
             </div>
 
-            <input 
-              placeholder="Image URL (Optional)" 
-              value={newGrave.image}
-              onChange={e => setNewGrave({...newGrave, image: e.target.value})}
-            />
+            {/* NEW IMAGE UPLOAD UI */}
+            <label className="file-upload-label">
+              {previewImage ? (
+                <img src={previewImage} style={{height: '50px', borderRadius: '5px'}} alt="preview"/>
+              ) : (
+                <span>📸 Upload Photo of the Body (Optional)</span>
+              )}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                style={{display: 'none'}} 
+              />
+            </label>
             
             <button className="bury-btn" onClick={handleBurial}>
-              LOWER THE CASKET
+              DIG THE HOLE
             </button>
           </div>
         </div>
