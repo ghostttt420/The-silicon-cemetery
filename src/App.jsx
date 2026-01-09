@@ -298,20 +298,14 @@ export default function App() {
               ))}
             </div>
 
-                        <div style={{marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              
-              {/* Row 1: Respects + Share */}
-              <div style={{display: 'flex', gap: '10px'}}>
-                <button 
-                  className="pay-respects-btn"
-                  style={{flex: 1}}
-                  onClick={() => handleRespect(grave.id, grave.respects)}
-                >
-                  F ({grave.respects})
-                </button>
-                
-                {/* NEW SHARE BUTTON */}
-                <button 
+            <div style={{marginTop: '15px'}}>
+              <button 
+                className="pay-respects-btn"
+                onClick={() => handleRespect(grave.id, grave.respects)}
+              >
+                F ({grave.respects})
+              </button>
+   <button 
                   className="pay-respects-btn"
                   style={{width: '60px', background: '#fff', color: '#000'}} 
                   onClick={() => handleShare(grave)}
@@ -319,13 +313,13 @@ export default function App() {
                   📢
                 </button>
               </div>
-
-              {/* Row 2: Fix */}
               <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
                 🔧 Attempt Resurrection
               </button>
             </div>
-
+          </div>
+        ))}
+      </div>
 
       <button className="add-grave-btn" onClick={() => setShowModal(true)}>+</button>
 
