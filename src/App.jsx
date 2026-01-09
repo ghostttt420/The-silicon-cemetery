@@ -132,6 +132,25 @@ export default function App() {
     }, 800);
   };
 
+   // NEW: Native Share Feature
+  const handleShare = (grave) => {
+    const shareData = {
+      title: `RIP ${grave.name}`,
+      text: `⚰️ Please join me in mourning ${grave.name}. It died of ${grave.cause}. Leave an offering here:`,
+      url: window.location.href // Shares the current URL
+    };
+
+    // Use the native Android share menu if available
+    if (navigator.share) {
+      navigator.share(shareData).catch(console.error);
+    } else {
+      // Fallback for laptops
+      navigator.clipboard.writeText(window.location.href);
+      speak("Link copied. Spread the sadness.");
+      alert("Link copied to clipboard!");
+    }
+  };
+
   const handleRespect = async (id, currentRespects) => {
     const graveRef = doc(db, "graves", id);
     await updateDoc(graveRef, {
@@ -286,6 +305,14 @@ export default function App() {
               >
                 F ({grave.respects})
               </button>
+   <button 
+                  className="pay-respects-btn"
+                  style={{width: '60px', background: '#fff', color: '#000'}} 
+                  onClick={() => handleShare(grave)}
+                >
+                  📢
+                </button>
+              </div>
               <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
                 🔧 Attempt Resurrection
               </button>
