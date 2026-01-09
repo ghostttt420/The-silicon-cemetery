@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { db } from './firebase'; // Import your DB
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  orderBy, 
+  limit 
+} from 'firebase/firestore';
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&w=400&q=80";
 
@@ -41,26 +52,35 @@ const BSOD_ERRORS = [
 ];
 
 export default function App() {
-  const [graves, setGraves] = useState(() => {
-    try {
-      const saved = localStorage.getItem('silicon-cemetery-v3');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
+  const [graves, setGraves] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]); // Top 3 Graves
+  
   const [showModal, setShowModal] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false); // Toggle for Leaderboard modal
   const [newGrave, setNewGrave] = useState({ name: '', cause: '', eulogy: '', image: null });
   const [previewImage, setPreviewImage] = useState(null);
   
-  // Track which grave is currently "crashing" (showing BSOD)
   const [crashedGraveId, setCrashedGraveId] = useState(null);
-  const [fixStatus, setFixStatus] = useState(""); // Text for the "Applying rice..." part
+  const [fixStatus, setFixStatus] = useState("");
 
+  // 1. LISTEN TO FIRESTORE (Real-time updates)
   useEffect(() => {
-    localStorage.setItem('silicon-cemetery-v3', JSON.stringify(graves));
-  }, [graves]);
+    // Get all graves sorted by newest first
+    const q = query(collection(db, "graves"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const gravesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setGraves(gravesData);
+      
+      // Calculate Leaderboard (Top 3 by respects)
+      const topGraves = [...gravesData].sort((a, b) => b.respects - a.respects).slice(0, 3);
+      setLeaderboard(topGraves);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const speak = (text) => {
     if ('speechSynthesis' in window) {
@@ -74,8 +94,8 @@ export default function App() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2000000) {
-        alert("File too big! Ghost rejected it.");
+      if (file.size > 1000000) { // Lower limit for Firestore (1MB)
+        alert("File too big! Firestore hates large files.");
         return;
       }
       const reader = new FileReader();
@@ -87,30 +107,27 @@ export default function App() {
     }
   };
 
-  // THE NECROMANCY LOGIC
   const attemptFix = (id) => {
-    if (crashedGraveId === id) return; // Already dead
-
-    // Step 1: Play fake progress
+    if (crashedGraveId === id) return;
     let step = 0;
     const interval = setInterval(() => {
       setFixStatus(`${FIX_ATTEMPTS[Math.floor(Math.random() * FIX_ATTEMPTS.length)]}`);
       step++;
-      
-      // Step 2: FAIL SPECTACULARLY
       if (step > 4) {
         clearInterval(interval);
         setFixStatus("");
-        setCrashedGraveId(id); // Trigger BSOD
+        setCrashedGraveId(id);
         speak("System failure. You cannot fix what is broken.");
       }
     }, 800);
   };
 
-  const handleRespect = (id) => {
-    setGraves(graves.map(grave => 
-      grave.id === id ? { ...grave, respects: grave.respects + 1 } : grave
-    ));
+  // UPDATE FIRESTORE
+  const handleRespect = async (id, currentRespects) => {
+    const graveRef = doc(db, "graves", id);
+    await updateDoc(graveRef, {
+      respects: currentRespects + 1
+    });
     if (navigator.vibrate) navigator.vibrate(50);
   };
 
@@ -121,22 +138,23 @@ export default function App() {
     speak("The spirit speaks.");
   };
 
-  const handleBurial = (e) => {
+  // ADD TO FIRESTORE
+  const handleBurial = async (e) => {
     e.preventDefault();
     speak(`Burying ${newGrave.name}.`);
 
-    // Assign a random sin
     const randomSin = TECH_SINS[Math.floor(Math.random() * TECH_SINS.length)];
 
-    const grave = {
-      id: Date.now(),
-      ...newGrave,
+    await addDoc(collection(db, "graves"), {
+      name: newGrave.name,
+      cause: newGrave.cause,
+      eulogy: newGrave.eulogy,
+      image: newGrave.image || DEFAULT_IMAGE,
       sin: randomSin,
       respects: 0,
-      image: newGrave.image || DEFAULT_IMAGE
-    };
+      timestamp: Date.now()
+    });
     
-    setGraves([grave, ...graves]);
     setShowModal(false);
     setNewGrave({ name: '', cause: '', eulogy: '', image: null });
     setPreviewImage(null);
@@ -146,27 +164,26 @@ export default function App() {
     <div className="app-container">
       <header style={{textAlign: 'center'}}>
         <h1>TOON GRAVEYARD ☠️</h1>
-        <div className="subtitle">THEY ARE GONE. DEAL WITH IT.</div>
+        <div className="subtitle">GLOBAL SERVER OF DEAD TECH</div>
       </header>
+      
+      {/* LEADERBOARD BUTTON */}
+      <button 
+        className="leaderboard-btn" 
+        onClick={() => setShowLeaderboard(true)}
+      >
+        🏆 High Council of Trash
+      </button>
 
-      {/* Floating Status Text for "Fixing" */}
       {fixStatus && (
-        <div style={{
-          position:'fixed', top:'50%', left:'50%', transform:'translate(-50%, -50%)', 
-          background:'yellow', border:'3px solid black', padding:'20px', 
-          fontWeight:'bold', zIndex: 999, fontSize:'1.5rem', boxShadow:'10px 10px 0 black'
-        }}>
+        <div className="fix-overlay">
           🔧 {fixStatus}
         </div>
       )}
 
       <div className="cemetery-grid">
-        {graves.length === 0 && <p style={{textAlign:'center', width:'100%'}}>No deaths yet. Boring.</p>}
-        
         {graves.map(grave => (
           <div key={grave.id} className="tombstone">
-            
-            {/* THE BSOD OVERLAY (Only shows if crashedGraveId matches) */}
             {crashedGraveId === grave.id && (
               <div className="bsod-overlay" onClick={() => setCrashedGraveId(null)}>
                 <div className="bsod-title">WINDOWS_DIED</div>
@@ -179,29 +196,20 @@ export default function App() {
             )}
 
             <img src={grave.image} alt="Dead gadget" className="gadget-img" />
-            
-            <div className="rip-header">
-              {grave.name}
-            </div>
-
+            <div className="rip-header">{grave.name}</div>
             <div style={{marginBottom:'10px'}}>
               <div className="cause-tag">💀 {grave.cause || "Unknown"}</div>
-              {/* NEW SIN TAG */}
               <div className="sin-tag">😈 {grave.sin}</div>
             </div>
-            
             <blockquote className="eulogy">"{grave.eulogy}"</blockquote>
-
             <button 
               className="pay-respects-btn"
-              onClick={() => handleRespect(grave.id)}
+              onClick={() => handleRespect(grave.id, grave.respects)}
             >
               F ({grave.respects})
             </button>
-
-            {/* NEW FIX BUTTON */}
             <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
-              🔧 Attempt Resurrection (Rice Method)
+              🔧 Attempt Resurrection
             </button>
           </div>
         ))}
@@ -209,6 +217,7 @@ export default function App() {
 
       <button className="add-grave-btn" onClick={() => setShowModal(true)}>+</button>
 
+      {/* BURIAL MODAL */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="burial-form" onClick={e => e.stopPropagation()}>
@@ -243,6 +252,29 @@ export default function App() {
               <input type="file" accept="image/*" onChange={handleImageChange} style={{display: 'none'}} />
             </label>
             <button className="bury-btn" onClick={handleBurial}>DIG THE HOLE</button>
+          </div>
+        </div>
+      )}
+
+      {/* LEADERBOARD MODAL */}
+      {showLeaderboard && (
+        <div className="modal-overlay" onClick={() => setShowLeaderboard(false)}>
+          <div className="leaderboard-modal" onClick={e => e.stopPropagation()}>
+             <h2>🏆 THE HIGH COUNCIL 🏆</h2>
+             <p>The most respected junk in the world.</p>
+             <div className="leaderboard-list">
+               {leaderboard.map((grave, index) => (
+                 <div key={grave.id} className="leaderboard-item">
+                   <div className="rank">#{index + 1}</div>
+                   <img src={grave.image} className="leaderboard-img" />
+                   <div className="leaderboard-info">
+                     <div className="leaderboard-name">{grave.name}</div>
+                     <div className="leaderboard-respects">{grave.respects} Respects Paid</div>
+                   </div>
+                 </div>
+               ))}
+             </div>
+             <button className="close-btn" onClick={() => setShowLeaderboard(false)}>CLOSE</button>
           </div>
         </div>
       )}
