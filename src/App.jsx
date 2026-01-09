@@ -140,18 +140,27 @@ export default function App() {
     if (navigator.vibrate) navigator.vibrate(50);
   };
 
-  // NEW: HANDLE VANDALISM/OFFERINGS
+    // UPDATED: Now supports infinite trash spam
   const handleOffering = async (id, item) => {
     const graveRef = doc(db, "graves", id);
+    
+    // We attach a random ID so Firestore treats every click as unique
+    const uniqueTrash = { 
+      emoji: item, 
+      id: Date.now() + Math.random() 
+    };
+
     await updateDoc(graveRef, {
-      offerings: arrayUnion(item) // Adds item to the array in Firestore
+      offerings: arrayUnion(uniqueTrash) 
     });
+
     if (navigator.vibrate) navigator.vibrate(20);
     
-    // Funny feedback
+    // Feedback logic
     if (item === "💩") speak("Disgusting.");
-    if (item === "🤡") speak("Honk honk.");
+    if (item === "🤡") speak("Honk.");
   };
+
 
   const channelSpirit = (e) => {
     e.preventDefault();
