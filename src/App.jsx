@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { db } from './firebase'; // Import your DB
+import { db } from './firebase'; 
 import { 
   collection, 
   onSnapshot, 
@@ -8,11 +8,14 @@ import {
   updateDoc, 
   doc, 
   query, 
-  orderBy, 
-  limit 
+  orderBy,
+  arrayUnion // NEW: Needed for adding items to arrays
 } from 'firebase/firestore';
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&w=400&q=80";
+
+// NEW: The items you can throw on graves
+const OFFERINGS = ["🤡", "🔋", "🗑️", "🕯️", "💐", "💩"];
 
 const GHOST_MESSAGES = [
   "I saw your browser history. I chose death.",
@@ -53,19 +56,27 @@ const BSOD_ERRORS = [
 
 export default function App() {
   const [graves, setGraves] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]); // Top 3 Graves
+  const [leaderboard, setLeaderboard] = useState([]); 
   
   const [showModal, setShowModal] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false); // Toggle for Leaderboard modal
+  const [showLeaderboard, setShowLeaderboard] = useState(false); 
   const [newGrave, setNewGrave] = useState({ name: '', cause: '', eulogy: '', image: null });
   const [previewImage, setPreviewImage] = useState(null);
   
   const [crashedGraveId, setCrashedGraveId] = useState(null);
   const [fixStatus, setFixStatus] = useState("");
 
-  // 1. LISTEN TO FIRESTORE (Real-time updates)
+  // NEW: Night Mode State
+  const [isHaunted, setIsHaunted] = useState(false);
+
   useEffect(() => {
-    // Get all graves sorted by newest first
+    // 1. Check for Real Night Time (12 AM - 3 AM)
+    const hour = new Date().getHours();
+    if (hour >= 0 && hour < 3) {
+      setIsHaunted(true);
+    }
+
+    // 2. Database Listener
     const q = query(collection(db, "graves"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const gravesData = snapshot.docs.map(doc => ({
@@ -74,7 +85,6 @@ export default function App() {
       }));
       setGraves(gravesData);
       
-      // Calculate Leaderboard (Top 3 by respects)
       const topGraves = [...gravesData].sort((a, b) => b.respects - a.respects).slice(0, 3);
       setLeaderboard(topGraves);
     });
@@ -85,8 +95,8 @@ export default function App() {
   const speak = (text) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9; 
-      utterance.pitch = 0.6; 
+      utterance.rate = isHaunted ? 0.5 : 0.9; // Speak slower if haunted
+      utterance.pitch = isHaunted ? 0.1 : 0.6; // Deep demon voice if haunted
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -94,7 +104,7 @@ export default function App() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1000000) { // Lower limit for Firestore (1MB)
+      if (file.size > 1000000) { 
         alert("File too big! Firestore hates large files.");
         return;
       }
@@ -122,13 +132,25 @@ export default function App() {
     }, 800);
   };
 
-  // UPDATE FIRESTORE
   const handleRespect = async (id, currentRespects) => {
     const graveRef = doc(db, "graves", id);
     await updateDoc(graveRef, {
       respects: currentRespects + 1
     });
     if (navigator.vibrate) navigator.vibrate(50);
+  };
+
+  // NEW: HANDLE VANDALISM/OFFERINGS
+  const handleOffering = async (id, item) => {
+    const graveRef = doc(db, "graves", id);
+    await updateDoc(graveRef, {
+      offerings: arrayUnion(item) // Adds item to the array in Firestore
+    });
+    if (navigator.vibrate) navigator.vibrate(20);
+    
+    // Funny feedback
+    if (item === "💩") speak("Disgusting.");
+    if (item === "🤡") speak("Honk honk.");
   };
 
   const channelSpirit = (e) => {
@@ -138,7 +160,6 @@ export default function App() {
     speak("The spirit speaks.");
   };
 
-  // ADD TO FIRESTORE
   const handleBurial = async (e) => {
     e.preventDefault();
     speak(`Burying ${newGrave.name}.`);
@@ -152,6 +173,7 @@ export default function App() {
       image: newGrave.image || DEFAULT_IMAGE,
       sin: randomSin,
       respects: 0,
+      offerings: [], // Start with empty offerings
       timestamp: Date.now()
     });
     
@@ -161,13 +183,27 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isHaunted ? 'haunted-mode' : ''}`}>
+      
+      {/* DEV TOGGLE: So you can see night mode even during the day */}
+      <button className="toggle-night-btn" onClick={() => setIsHaunted(!isHaunted)}>
+        {isHaunted ? "☀️ Day" : "🌙 Night"}
+      </button>
+
+      {/* HAUNTED GHOSTS LAYER */}
+      {isHaunted && (
+        <div className="ghost-container">
+          <div className="floating-ghost" style={{top: '20%', animationDuration: '12s'}}>👻</div>
+          <div className="floating-ghost" style={{top: '50%', animationDuration: '8s', animationDelay: '2s'}}>💀</div>
+          <div className="floating-ghost" style={{top: '80%', animationDuration: '15s', animationDelay: '5s'}}>🕸️</div>
+        </div>
+      )}
+
       <header style={{textAlign: 'center'}}>
         <h1>SILICON CEMETERY ☠️</h1>
         <div className="subtitle">GLOBAL SERVER OF DEAD TECH</div>
       </header>
       
-      {/* LEADERBOARD BUTTON */}
       <button 
         className="leaderboard-btn" 
         onClick={() => setShowLeaderboard(true)}
@@ -190,8 +226,6 @@ export default function App() {
                 <p>A problem has been detected and your hope has been shut down.</p>
                 <br/>
                 <p>{BSOD_ERRORS[Math.floor(Math.random() * BSOD_ERRORS.length)]}</p>
-                <br/>
-                <p style={{fontSize:'0.7rem'}}>Press any key to accept your loss.</p>
               </div>
             )}
 
@@ -202,22 +236,45 @@ export default function App() {
               <div className="sin-tag">😈 {grave.sin}</div>
             </div>
             <blockquote className="eulogy">"{grave.eulogy}"</blockquote>
-            <button 
-              className="pay-respects-btn"
-              onClick={() => handleRespect(grave.id, grave.respects)}
-            >
-              F ({grave.respects})
-            </button>
-            <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
-              🔧 Attempt Resurrection
-            </button>
+            
+            {/* NEW: Trash/Offering Display */}
+            <div className="trash-pile">
+              {grave.offerings && grave.offerings.map((item, index) => (
+                <span key={index} className="trash-item">{item}</span>
+              ))}
+              {(!grave.offerings || grave.offerings.length === 0) && <span style={{opacity:0.5, fontSize:'0.8rem'}}>No offerings yet...</span>}
+            </div>
+
+            {/* NEW: Vandalism Bar */}
+            <div className="offering-bar">
+              {OFFERINGS.map(emoji => (
+                <button 
+                  key={emoji} 
+                  className="offering-btn" 
+                  onClick={() => handleOffering(grave.id, emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <div style={{marginTop: '15px'}}>
+              <button 
+                className="pay-respects-btn"
+                onClick={() => handleRespect(grave.id, grave.respects)}
+              >
+                F ({grave.respects})
+              </button>
+              <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
+                🔧 Attempt Resurrection
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
       <button className="add-grave-btn" onClick={() => setShowModal(true)}>+</button>
 
-      {/* BURIAL MODAL */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="burial-form" onClick={e => e.stopPropagation()}>
@@ -256,12 +313,10 @@ export default function App() {
         </div>
       )}
 
-      {/* LEADERBOARD MODAL */}
       {showLeaderboard && (
         <div className="modal-overlay" onClick={() => setShowLeaderboard(false)}>
           <div className="leaderboard-modal" onClick={e => e.stopPropagation()}>
              <h2>🏆 THE HIGH COUNCIL 🏆</h2>
-             <p>The most respected junk in the world.</p>
              <div className="leaderboard-list">
                {leaderboard.map((grave, index) => (
                  <div key={grave.id} className="leaderboard-item">
