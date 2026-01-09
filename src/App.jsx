@@ -312,7 +312,7 @@ export default function App() {
                 >
                   📢
                 </button>
-              </div>
+              
               <button className="fix-btn" onClick={() => attemptFix(grave.id)}>
                 🔧 Attempt Resurrection
               </button>
