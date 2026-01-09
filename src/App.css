@@ -210,3 +210,68 @@ input, select, textarea {
   border-radius: 10px;
   margin-top: 10px;
 }
+
+/* Add to App.css */
+
+/* THE SIN TAG */
+.sin-tag {
+  background: #ff00ff;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border: 2px solid #000;
+  display: inline-block;
+  margin-left: 10px;
+  transform: rotate(3deg);
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* THE NECROMANCY BUTTON */
+.fix-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: #fff;
+  border: 2px dashed #000;
+  padding: 10px;
+  font-size: 0.8rem;
+}
+
+.fix-btn:hover {
+  background: #ffff00;
+}
+
+/* FAKE BLUE SCREEN OF DEATH (BSOD) OVERLAY */
+.bsod-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #0000aa; /* Classic Windows Blue */
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 20px;
+  font-size: 0.9rem;
+  z-index: 10;
+  border-radius: 13px; /* Match card radius */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: left;
+  animation: glitch 0.2s linear;
+}
+
+.bsod-title {
+  background: #fff;
+  color: #0000aa;
+  padding: 2px 5px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+@keyframes glitch {
+  0% { transform: translate(2px, 2px); }
+  25% { transform: translate(-2px, -2px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-2px, 2px); }
+  100% { transform: translate(0, 0); }
+}
