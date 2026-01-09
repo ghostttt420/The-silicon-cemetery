@@ -371,3 +371,109 @@ input, select, textarea {
   font-size: 1.5rem; 
   box-shadow: 10px 10px 0 black;
 }
+
+/* --- NEW FEATURES V4 --- */
+
+/* 1. NIGHT MODE (Haunted) */
+.haunted-mode {
+  background: #050505;
+  background-image: none;
+  color: #00ff00; /* Matrix green text */
+}
+
+.haunted-mode .tombstone {
+  background: #1a1a1a;
+  border-color: #555;
+  box-shadow: 0 0 15px #ff0000; /* Red evil glow */
+}
+
+.haunted-mode h1 {
+  color: #ff0000;
+  text-shadow: 0 0 10px #ff0000;
+  -webkit-text-stroke: 0px;
+}
+
+/* 2. FLOATING GHOSTS */
+.ghost-container {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; /* Let clicks pass through */
+  z-index: 50;
+  overflow: hidden;
+}
+
+.floating-ghost {
+  position: absolute;
+  font-size: 3rem;
+  opacity: 0.6;
+  animation: floatAcross 10s linear infinite;
+}
+
+@keyframes floatAcross {
+  0% { transform: translateX(-10vw) translateY(0) rotate(0deg); }
+  25% { transform: translateX(25vw) translateY(-50px) rotate(10deg); }
+  50% { transform: translateX(50vw) translateY(0) rotate(-10deg); }
+  75% { transform: translateX(75vw) translateY(50px) rotate(10deg); }
+  100% { transform: translateX(110vw) translateY(0) rotate(0deg); }
+}
+
+/* 3. OFFERINGS (Vandalism) */
+.offering-bar {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  justify-content: center;
+  background: rgba(0,0,0,0.05);
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.offering-btn {
+  background: none;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 5px;
+  border-radius: 5px;
+  transition: transform 0.1s;
+}
+
+.offering-btn:active {
+  transform: scale(1.5);
+}
+
+.trash-pile {
+  margin-top: 10px;
+  padding: 5px;
+  background: #fff;
+  border: 2px dashed #ccc;
+  min-height: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+
+.trash-item {
+  font-size: 1.2rem;
+  animation: dropIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dropIn {
+  0% { transform: translateY(-20px) scale(0.5); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Dev Toggle for Night Mode */
+.toggle-night-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: black;
+  color: white;
+  border: 2px solid white;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  cursor: pointer;
+}
