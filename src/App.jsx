@@ -246,13 +246,25 @@ export default function App() {
             </div>
             <blockquote className="eulogy">"{grave.eulogy}"</blockquote>
             
-            {/* NEW: Trash/Offering Display */}
+                    {/* UPDATED TRASH DISPLAY */}
             <div className="trash-pile">
-              {grave.offerings && grave.offerings.map((item, index) => (
-                <span key={index} className="trash-item">{item}</span>
-              ))}
-              {(!grave.offerings || grave.offerings.length === 0) && <span style={{opacity:0.5, fontSize:'0.8rem'}}>No offerings yet...</span>}
+              {grave.offerings && grave.offerings.map((item, index) => {
+                // Check if it's the old format (string) or new format (object)
+                const emojiToShow = typeof item === 'object' ? item.emoji : item;
+                const uniqueKey = typeof item === 'object' ? item.id : index;
+                
+                return (
+                  <span key={uniqueKey} className="trash-item">
+                    {emojiToShow}
+                  </span>
+                );
+              })}
+              
+              {(!grave.offerings || grave.offerings.length === 0) && (
+                <span style={{opacity:0.5, fontSize:'0.8rem'}}>No offerings yet...</span>
+              )}
             </div>
+
 
             {/* NEW: Vandalism Bar */}
             <div className="offering-bar">
